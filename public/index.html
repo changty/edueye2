@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>EduEye 2.0</title>
+
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
+
+	<link rel="stylesheet" type="text/css" href="/stylesheets/style.css"/>
+</head>
+
+<body>
+
+	<video class="remoteVideo"></video>
+	<video class="localVideo"></video>
+
+
+		<script src="/socket.io/socket.io.js"></script>	
+		<script src="/components/webrtc-adapter/adapter.js"></script>
+	    <script src="/components/jquery/dist/jquery.min.js"></script>
+	    <script src="/scripts/edueye.js"></script>
+
+	    <script>
+	    var edyeye = new Happy();
+	    </script>
+	</body>
+</html>

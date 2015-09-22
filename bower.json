@@ -1,0 +1,24 @@
+{
+  "name": "webrtc-happy",
+  "version": "0.0.1",
+  "homepage": "https://github.com/changty/edy-eye2",
+  "moduleType": [
+    "node"
+  ],
+  "authors": [
+    "Einari Kurvinen",
+    "Rolf Lindén"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "~2.1.4",
+    "webrtc-adapter": "~0.1.4"
+  }
+}
