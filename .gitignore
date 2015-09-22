@@ -1,3 +1,4 @@
 .vagrant/*
 .vagrant
 node_modules
+public/components
