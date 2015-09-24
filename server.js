@@ -18,6 +18,8 @@ var staticFiles		= express.Router();
 
 var uuid			= require('node-uuid');
 
+// console output colors
+var colors = require('colors/safe');
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
@@ -56,66 +58,32 @@ io.on('connection', function(client) {
     // pass a message to another id
     client.on('message', function (details) {
         if (!details) return;
-        console.log('>> IO: \t Sending message to: ', details.to, ' from: ', details.from);
-        console.log('>> IO: \t\t Type of message: ', details.type);
+        console.log(colors.underline.yellow('>> IO: \t Sending message to: %s'), details.to);
+        console.log(colors.green('>> IO: \t\t [%s]'), details.type);
         client.to(details.to).emit('message', details);
-    });
-
-    client.on('shareScreen', function () {
-        client.resources.screen = true;
-    });
-
-    client.on('unshareScreen', function (type) {
-        client.resources.screen = false;
-        removeFeed('screen');
     });
 
     client.on('create or join', join);
 
-    function removeFeed(type) {
-        if (client.room) {
-            io.sockets.in(client.room).emit('remove', {
-                id: client.id,
-                type: type
-            });
-            if (!type) {
-                client.leave(client.room);
-                client.room = undefined;
-            }
-        }
-    }
-
     function join(room) {
         console.log('>> IO: \t Joining room: ', room);
+        
         // sanity check
         if (typeof room !== 'string') return;
-        // check if maximum number of clients reached
-        // if (config.rooms && config.rooms.maxClients > 0 && 
-        //   clientsInRoom(room) >= config.rooms.maxClients) {
-        //     client.emit('full');
-        //     return;
-        // }
-        // leave any existing rooms
-        // removeFeed();
-        // client.emit('describe room', describeRoom(room));
-        client.join(room);
-        client.room = room;
 
-        // if(clientsInRoom(room) == 1) {
-        //     client.emit('created', room);
-        // }
-        client.emit('joined', {room: room});
-        client.to(room).emit('joined', {room: room, fname: '', lname: '', email: '', image: '', happy_addr: ''});
-        console.log(">> IO: \t", "Client joined a room", client.room);
+        client.join(room);
+        // client.room = room;
+
+        client.emit('joined', 'I joined my self');
+        client.to(room).emit('joined', 'remote-device-joined');
+        console.log(">> IO: \t", "Client joined a room", room);
     }
 
     // we don't want to pass "leave" directly because the
     // event type string of "socket end" gets passed too.
     client.on('disconnect', function () {
-        removeFeed();
     });
     client.on('leave', function () {
-        removeFeed();
     });
 
 
@@ -126,26 +94,6 @@ io.on('connection', function(client) {
             [data.type, data.session, data.prefix, data.peer, data.time, data.value]
         ));
     });
-
-
-    // tell client about stun and turn servers and generate nonces
-    client.emit('stunservers', config.stunservers || []);
-
-    // create shared secret nonces for TURN authentication
-    // the process is described in draft-uberti-behave-turn-rest
-    var credentials = [];
-    config.turnservers.forEach(function (server) {
-        var hmac = crypto.createHmac('sha1', server.secret);
-        // default to 86400 seconds timeout unless specified
-        var username = Math.floor(new Date().getTime() / 1000) + (server.expiry || 86400) + "";
-        hmac.update(username);
-        credentials.push({
-            username: username,
-            credential: hmac.digest('base64'),
-            url: server.url
-        });
-    });
-    client.emit('turnservers', credentials);
 
 });
 

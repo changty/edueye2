@@ -22,7 +22,8 @@
     "request": "2.45.x",
     "socket.io": "^1.2.1",
     "socket.io-client": "1.2.x",
-    "socket.io-handshake": "0.0.x"
+    "socket.io-handshake": "0.0.x",
+    "colors": "^1.1.2"
   },
   "repository": {
     "type": "git",

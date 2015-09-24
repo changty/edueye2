@@ -10,17 +10,77 @@
 
 <body>
 
-	<video class="remoteVideo"></video>
-	<video class="localVideo"></video>
+	<div class="hidden qrcode"></div>
 
+	<button class="hidden newConnection">Let's go!</button>
+
+
+	<video class="hidden remoteVideo"></video>
+	<video class="hidden localVideo"></video>
+	<script>
+	console.log(window.URL);
+	window.myURL = window.URL || window.webkitURL;
+	</script>
 
 		<script src="/socket.io/socket.io.js"></script>	
 		<script src="/components/webrtc-adapter/adapter.js"></script>
 	    <script src="/components/jquery/dist/jquery.min.js"></script>
+	    <script src="/components/jquery-qrcode/dist/jquery.qrcode.min.js"></script>
 	    <script src="/scripts/edueye.js"></script>
 
 	    <script>
-	    var edyeye = new Happy();
+	    var URL = 'http://192.168.0.16:3000/?room='; 
+	    var POSTFIX = '&video=true';
+	    var edyeye = null; 
+
+	    if(getUrlVars()['video'] != 'true') {
+	    	$('.newConnection').removeClass('hidden');
+			$('.newConnection').click(function(e) {
+				e.preventDefault(); 
+				var qrCodeTxt = guid(); 
+
+				edueye = new Happy({defaultRoom: qrCodeTxt}); 
+
+				$('.qrcode').removeClass('hidden');
+				$('.remoteVideo').removeClass('hidden');
+				console.log("coming up", URL + qrCodeTxt + POSTFIX);
+				$('.qrcode').qrcode({width: '512px', height: '512px', text: URL + qrCodeTxt + POSTFIX});
+			
+				// $('.qrcode').qrcode(URL + qrCodeTxt + POSTFIX);
+
+			});
+		}
+
+		else {
+			edueye = new Happy({defaultRoom: getUrlVars()['room'], videoDevice: true});
+			$('.newConnection').addClass('hidden');
+			$('.qrcode').addClass('hidden');
+			$('.localVideo').removeClass('hidden');
+		}
+
+			function getUrlVars() {
+				var self = this; 
+
+				var vars = {};
+			    var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi,    
+			    function(m,key,value) {
+			      vars[key] = value;
+			    });
+			    return vars;
+
+			}
+
+
+			function guid() {
+			  function s4() {
+			    return Math.floor((1 + Math.random()) * 0x10000)
+			      .toString(16)
+			      .substring(1);
+			  }
+			  return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+			    s4() + '-' + s4() + s4() + s4();
+			}
+
 	    </script>
 	</body>
 </html>

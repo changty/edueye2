@@ -1,9 +1,11 @@
 Happy = function(options) {
 	var self = this; 
 
+
 	this.options = {
 		server: 'http://192.168.0.16:3000',
-		defaultRoom: "my-default-room" 
+		defaultRoom: "my-default-room",
+		videoDevice: false
 	}
 
 	$.extend(this.options, options);
@@ -36,16 +38,24 @@ Happy = function(options) {
 					};
 	this.pc_constraints = {'optional': [{'DtlsSrtpKeyAgreement': true}]};
 
-	// Set up audio and video regardless of what devices are present.
+	// only interested in video
 	var sdpConstraints = {
 		'mandatory': {	
-			'OfferToReceiveAudio':true,
+			'OfferToReceiveAudio':false,
 			'OfferToReceiveVideo':true
 		}
 	};
 
 	// for testing purposes only, room handling needs to be done in a different manner
 	this.room = this.options.defaultRoom;
+	this.videoDevice = this.options.videoDevice;
+
+	if(this.videoDevice) {
+		$('.newConnection').addClass('hidden');
+		$('.localVideo').removeClass('hidden');
+		$('.qrcode').addClass('hidden');
+
+	}
 
 	// connect to socket server
 	this.socket = io();
@@ -71,11 +81,11 @@ Happy = function(options) {
 	});
 
 	this.socket.on('joined', function (data){
-		console.log('This peer has joined room ' + data.room, data);
+		console.log('This peer has joined room ', data);
 		// self.isChannelReady = true;
 
-		if(self.getUrlVars()["video"] == 'true') {
-			console.log('got video');
+		if(self.videoDevice) {
+			console.log('>>> got video, doing the call');
 			self.doCall();
 		}
 	});
@@ -84,7 +94,7 @@ Happy = function(options) {
 		// console.log('Client received a message: ', message); 
 
 		if (message.type == 'got user media') {
-			console.log('Got user media', message);
+			console.log('>>>>>>>>>>>>>>> Got user media', message);
 			if(!self.isStarted) {
 				self.maybeStart();
 			}
@@ -92,23 +102,25 @@ Happy = function(options) {
 
 		else if (message.type === 'offer') {
 			// self.isChannelReady = true;
-			console.log('Offer ', message);
+			console.log('>>>>>>>>>>>>>>> Offer ', message);
 
 			if(!self.isStarted) {
 				self.maybeStart(); 
 				self.pc.setRemoteDescription(new RTCSessionDescription(message.data));
 			}
-
+			
 			self.doAnswer();
+
+
 		}
 
 		else if (message.type === 'answer' && self.isStarted) {
-			console.log('Answer', message);
+			console.log('>>>>>>>>>>>>>>> Answer', message);
 			self.pc.setRemoteDescription(new RTCSessionDescription(message.data));
 		}
 
 		else if (message.type === 'candidate' && self.isStarted) {
-			console.log('ICECandidate: ', message)
+			console.log('>>>>>>>>>>>>>>> ICECandidate: ', message)
 			var candidate = new RTCIceCandidate({
 				sdpMLineIndex: message.label,
 				candidate: message.candidate
@@ -117,10 +129,11 @@ Happy = function(options) {
 		}
 
 		else if (message.type === 'bye' && self.isStarted) {
-			console.log('Bye...', message);
+			console.log('>>>>>>>>>>>>>>> Bye...', message);
 			self.handleRemoteHangup();
 		}
 		else if(message.type === 'hangup' && self.isStarted) {
+			console.log('>>>>>>>>>>>>>>> Hangup');
 			self.handleRemoteHangup();
 		}
 		else {
@@ -135,10 +148,6 @@ Happy = function(options) {
 
 Happy.prototype.init = function() {
 	var self = this; 
-
-	if(self.getUrlVars()['video'] == 'true') {
-		$('.remoteVideo').css({display: 'none'});
-	}
 	// var constraints = {video: true, audio:false}; 
 	// getUserMedia(constraints, self.handleUserMedia.bind(self), self.handleUserMediaError.bind(self));
 
@@ -168,7 +177,7 @@ Happy.prototype.sendMessage = function(message) {
 Happy.prototype.handleUserMedia = function(stream) {
 	var self = this; 
 	console.log("stream", stream);
-	if(self.getUrlVars()['video'] == 'true') {
+	if(self.videoDevice === true) {
 
 		console.log("starting the stream");
 
@@ -177,7 +186,7 @@ Happy.prototype.handleUserMedia = function(stream) {
 
 		console.log("local video", self.localVideo);
 
-		self.localVideo.src = window.URL.createObjectURL(stream); 
+		self.localVideo.src = window.myURL.createObjectURL(stream); 
 
 		self.localVideo.addEventListener('canplay', function() {
 			console.log("can play, trying to start video");
@@ -297,6 +306,11 @@ Happy.prototype.doAnswer = function() {
 
 	// forwardTo is already set in "offer"
 	console.log('Sending answer to peer'); 
+
+	$('.qrcode').addClass('hidden'); 
+	$('.newConnection').addClass('hidden');
+	$('.remoteVideo').removeClass('hidden');
+
 	self.pc.createAnswer(self.setLocalAndSendMessage.bind(self), null, self.sdpConstraints);
 }
 
@@ -354,7 +368,7 @@ Happy.prototype.handleRemoteStreamAdded = function(event) {
 
 	console.log('Remote stream added', event.stream);
 	self.remoteVideo = $('.remoteVideo')[0]
-	self.remoteVideo.src = window.URL.createObjectURL(event.stream); 
+	self.remoteVideo.src = window.myURL.createObjectURL(event.stream); 
 	self.remoteStream = event.stream; 
 
 	self.remoteVideo.addEventListener('canplay', function() {
@@ -374,7 +388,7 @@ Happy.prototype.hangup = function() {
 	self.localVideo = $('.localVideo')[0];
 	self.remoteVideo = $('.remoteVideo')[0];
 
-  	if(self.localVideo && self.getUrlVars()['video'] == 'true') {
+  	if(self.localVideo && self.videoDevice === true) {
 	  	self.localVideo.pause();
 	  	self.localVideo.src = null;
   	}
@@ -492,16 +506,4 @@ Happy.prototype.removeCN = function(sdpLines, mLineIndex) {
 
 Happy.prototype.trace = function(text, obj) {
 	console.log((performance.now() / 1000).toFixed(3) + ": " + text, obj);
-}
-
-Happy.prototype.getUrlVars = function() {
-	var self = this; 
-
-	var vars = {};
-    var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi,    
-    function(m,key,value) {
-      vars[key] = value;
-    });
-    return vars;
-
 }
