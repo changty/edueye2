@@ -39,7 +39,7 @@
 				e.preventDefault(); 
 				var qrCodeTxt = guid(); 
 
-				edueye = new Happy({defaultRoom: qrCodeTxt}); 
+				edueye = new EduEye({defaultRoom: qrCodeTxt}); 
 
 				$('.qrcode').removeClass('hidden');
 				$('.remoteVideo').removeClass('hidden');
@@ -52,7 +52,7 @@
 		}
 
 		else {
-			edueye = new Happy({defaultRoom: getUrlVars()['room'], videoDevice: true});
+			edueye = new EduEye({defaultRoom: getUrlVars()['room'], videoDevice: true});
 			$('.newConnection').addClass('hidden');
 			$('.qrcode').addClass('hidden');
 			$('.localVideo').removeClass('hidden');
