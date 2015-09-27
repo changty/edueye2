@@ -28,6 +28,19 @@ body  {
 	height: 100%;
 }
 
+.copypaste {
+	position: relative;
+	top: 1vw;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 999999;
+	font-family: Arial, Verdana, Tahoma;
+	width: 50%;
+	color: #fff;
+	border: 1px solid #fff;
+	background: #2980b9;
+}
+
 .hidden {
 	display: none !important;
 }

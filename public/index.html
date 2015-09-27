@@ -6,12 +6,15 @@
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
 
 	<link rel="stylesheet" type="text/css" href="/stylesheets/style.css"/>
+		<script src="/components/webrtc-adapter/adapter.js"></script>
+	    <script src="/components/jquery/dist/jquery.min.js"></script>
 </head>
 
 <body>
 
 	<div class="hidden qrcode"></div>
 
+	<input type="text" name="url" class="hidden copypaste">
 	<button class="hidden newConnection">Let's go!</button>
 
 
@@ -23,8 +26,6 @@
 	</script>
 
 		<script src="/socket.io/socket.io.js"></script>	
-		<script src="/components/webrtc-adapter/adapter.js"></script>
-	    <script src="/components/jquery/dist/jquery.min.js"></script>
 	    <script src="/components/jquery-qrcode/dist/jquery.qrcode.min.js"></script>
 	    <script src="/scripts/edueye.js"></script>
 
@@ -35,14 +36,17 @@
 
 	    if(getUrlVars()['video'] != 'true') {
 	    	$('.newConnection').removeClass('hidden');
-			$('.newConnection').click(function(e) {
+	    	$('.newConnection').click(function(e) {
 				e.preventDefault(); 
 				var qrCodeTxt = guid(); 
 
 				edueye = new EduEye({defaultRoom: qrCodeTxt}); 
 
 				$('.qrcode').removeClass('hidden');
+				$('.copypaste').removeClass('hidden');
 				$('.remoteVideo').removeClass('hidden');
+				$('.copypaste').val(URL + qrCodeTxt + POSTFIX);
+
 				console.log("coming up", URL + qrCodeTxt + POSTFIX);
 				$('.qrcode').qrcode({width: '512px', height: '512px', text: URL + qrCodeTxt + POSTFIX});
 			

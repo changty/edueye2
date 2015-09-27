@@ -18,7 +18,19 @@ EduEye = function(options) {
 	// only interested in video
 	var sdpConstraints = {
 		'mandatory': {	
-			'OfferToReceiveAudio':false,
+			'offerToReceiveAudio':false,
+			'offerToReceiveVideo':true,
+			'OfferToReceiveAduio':false,
+			'OfferToReceiveVideo':true
+		}
+	};
+
+	// caller (ie video device) doesn't want to receive video or audio
+	var sdpCallerConstraints = {
+		'mandatory': {	
+			'offerToReceiveAudio':false,
+			'offerToReceiveVideo':true,
+			'OfferToReceiveAduio':false,
 			'OfferToReceiveVideo':true
 		}
 	};
@@ -30,8 +42,23 @@ EduEye = function(options) {
 	this.peerConnection; // Peer connection
 	this.peerConnectionConfig = {'iceServers': 
 						[
-							{'url': 'stun:stun.l.google.com:19302'},
-							{'url': 'stun:stun.services.mozilla.com'},
+							{	url: 'stun:stun.l.google.com:19302'},
+							{	url: 'stun:stun.services.mozilla.com'},
+							{
+								url: 'turn:numb.viagenie.ca',
+								credential: 'muazkh',
+								username: 'webrtc@live.com'
+							},
+							{
+								url: 'turn:192.158.29.39:3478?transport=udp',
+								credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
+								username: '28224511:1379330808'
+							},
+							{
+								url: 'turn:192.158.29.39:3478?transport=tcp',
+								credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
+								username: '28224511:1379330808'
+							}
 						]
 					};
 
@@ -46,7 +73,7 @@ EduEye = function(options) {
 		$('.newConnection').addClass('hidden');
 		$('.localVideo').removeClass('hidden');
 		$('.qrcode').addClass('hidden');
-
+		$('.copypaste').addClass('hidden');
 	}
 
 	// connect to socket server
@@ -76,7 +103,7 @@ EduEye = function(options) {
 		console.log('This peer has joined room ', data);
 	});
 
-	this.socket.on('message', self.gotMesasgeFromServer.bind(self));
+	this.socket.on('message', self.gotMessageFromServer.bind(self));
 
 	self.init();
 
@@ -86,6 +113,11 @@ EduEye = function(options) {
 EduEye.prototype.init = function() {
 	var self = this; 
 	console.log("init");
+	
+	if (location.hostname != "localhost") {
+		self.requestTurn('https://computeengineondemand.appspot.com/turn?username=41784574&key=4080218913');
+	}
+
 	if(self.videoDevice) {
 		getUserMedia(self.constraints, self.getUserMediaSuccess.bind(self), self.errorHandler.bind(self));
 	}
@@ -93,16 +125,13 @@ EduEye.prototype.init = function() {
 		console.log("not a video device");
 	}
 	
-	if (location.hostname != "localhost") {
-		self.requestTurn('https://computeengineondemand.appspot.com/turn?username=41784574&key=4080218913');
-	}
 }
 
 
 EduEye.prototype.sendMessage = function(message) {
 	var self = this; 
 
-	console.log('Client sending a message: ', message); 
+	console.log('Client sending a message: ', message.type); 
 	message.to = self.room;
 	self.socket.emit('message', message);
 }
@@ -121,20 +150,21 @@ EduEye.prototype.getUserMediaSuccess = function(stream) {
 		self.localVideo.play();
 	});
 
+	if(self.localVideo.readyState > 3) {
+		self.localVideo.play();
+	}
+
+	$('.localVideo').trigger('load');
+
 	self.start(true);
 		
 
 	self.sendMessage({type: 'got user media'}); 
-
-	// if(!self.isStarted) {
-	// 	self.maybeStart();
-	// }
-
 }
 
 EduEye.prototype.errorHandler = function(error) {
 	var self = this; 
-	console.log('getUserMedia error: ', error);
+	console.log('Error: ', error);
 }
 
 EduEye.prototype.start = function(isCaller) {
@@ -145,17 +175,17 @@ EduEye.prototype.start = function(isCaller) {
 	self.peerConnection.onaddstream = self.gotRemoteStream.bind(self);
 
 	if(self.videoDevice) {
-		console.log("added localstream");
 		self.peerConnection.addStream(self.localStream); 
 	}
 
+	// caller, ie video device, doesn't want to receive anything. Only transmit
 	if(isCaller) {
-		self.peerConnection.createOffer(self.gotDescription.bind(self), self.errorHandler.bind(self));
+		self.peerConnection.createOffer(self.gotDescription.bind(self), self.errorHandler.bind(self), self.sdpCallerConstraints);
 	}
 }
 
 
-EduEye.prototype.gotMesasgeFromServer = function(message) {
+EduEye.prototype.gotMessageFromServer = function(message) {
 	var self = this; 
 
 	if(!self.peerConnection) {
@@ -164,14 +194,21 @@ EduEye.prototype.gotMesasgeFromServer = function(message) {
 
 	// === SDP
 	if(message.type == 'offer') {
+		
+		console.log("SDP", message.data);
 		self.peerConnection.setRemoteDescription(new RTCSessionDescription(message.data), function() {
-			self.peerConnection.createAnswer(self.gotDescription.bind(self), self.errorHandler.bind(self));
+			console.log("creating an answer...");
+			self.peerConnection.createAnswer(self.gotDescription.bind(self), self.errorHandler.bind(self), self.sdpConstraints);
+
 		}, self.errorHandler.bind(self));
 	}
 	
 	// === ICE
 	else if (message.type === 'candidate') {
-		var candidate = new RTCIceCandidate({sdpMLineIndex: message.label, candidate: message.candidate});
+		var candidate = new RTCIceCandidate({
+					sdpMLineIndex: decodeURIComponent(message.sdpMLineIndex), 
+					candidate: decodeURIComponent(message.candidate)
+				});
 		self.peerConnection.addIceCandidate(candidate);
 	}
 
@@ -184,9 +221,21 @@ EduEye.prototype.gotMesasgeFromServer = function(message) {
 			self.localVideo.src = null;
 			self.localStream = null; 
 		}
+		
+		self.peerConnection = null;
+	}
+
+	else if(message.type === 'answer') {
+		self.peerConnection.setRemoteDescription(new RTCSessionDescription(message.data));
+		console.log("should work now, offer accepted");
 	}
 
 	else if (message.type === 'got user media') {
+	}
+
+	else {
+		console.log(">>>>>>>>>> Other message: ", message.type, message);
+
 	}
 } 
 
@@ -198,8 +247,9 @@ EduEye.prototype.gotIceCandidate = function(event) {
 		self.sendMessage({
 			type: 'candidate',
 			label: event.candidate.sdpMLineIndex,
+			sdpMLineIndex: encodeURIComponent(event.candidate.sdpMLineIndex),
 			id: event.candidate.sdpMid,
-			candidate: event.candidate.candidate
+			candidate: encodeURIComponent(event.candidate.candidate)
 		});
 	}
 	else {
@@ -212,9 +262,12 @@ EduEye.prototype.gotIceCandidate = function(event) {
 
 EduEye.prototype.gotDescription = function(description) {
 	var self = this;
-	console.log("got description");
+	console.log("Got description", description.type, description);
+
 	self.peerConnection.setLocalDescription(description, function() {
+
 		self.sendMessage({type: description.type, data: description});
+	
 	}, function() {console.log('set description error')}); 
 }
 
@@ -230,12 +283,18 @@ EduEye.prototype.gotRemoteStream = function(event) {
 	$('.newConnection').addClass('hidden');
 	$('.localVideo').addClass('hidden');
 	$('.qrcode').addClass('hidden');
-
+	$('.copypaste').addClass('hidden');
 
 	self.remoteVideo.addEventListener('canplay', function() {
 		console.log("can play, trying to start video");
 		self.remoteVideo.play();
 	});
+
+	if(self.remoteVideo.readyState > 3) {
+		self.remoteVideo.play();
+	}
+
+	$('.remoteVideo').trigger('load');
 
 }
 
@@ -245,13 +304,15 @@ EduEye.prototype.requestTurn = function(turn_url) {
 
 	var turnExists = false; 
 	for (var i in self.peerConnectionConfig.iceServers) {
-		if(self.peerConnectionConfig.iceServers[i].url.substr(0,5) === 'turn') {
+
+		if(self.peerConnectionConfig.iceServers[i].url.substr(0,4) === 'turn') {
 			turnExists = true; 
 			self.turnReady = true;
 			break; 
 		}
 	}
 
+	console.log("Got turn: ", turnExists);
 }
  
 EduEye.prototype.trace = function(text, obj) {

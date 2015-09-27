@@ -1,6 +1,6 @@
 {
   "name": "webrtc-adapter-test",
-  "version": "0.1.9",
+  "version": "0.2.3",
   "description": "Hide browser differences in WebRTC APIs (test package name)",
   "license": "BSD-3-Clause",
   "main": "adapter.js",
@@ -21,6 +21,7 @@
     "grunt-contrib-jshint": "^0.11.2",
     "grunt-contrib-nodeunit": "~0.4.1",
     "grunt-contrib-uglify": "^0.9.1",
+    "grunt-githooks": "^0.3.1",
     "grunt-jscs": "^2.0.0",
     "tape": "^4.0.0",
     "testling": "^1.7.1",
